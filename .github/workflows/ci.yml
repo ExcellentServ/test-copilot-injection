@@ -23,9 +23,26 @@ jobs:
           if [ -f setup.py ] || [ -f pyproject.toml ]; then
             pip install -e .
           else
-            echo "No Python package configuration found; skipping editable install."
+            echo "::notice::No setup.py or pyproject.toml detected; skipping editable install."
           fi
 
       - name: Run checks
         run: |
-          python -m compileall -q .
+          python - <<'PY'
+          import pathlib
+          import py_compile
+          import sys
+
+          files = [
+              path
+              for path in pathlib.Path(".").rglob("*.py")
+              if ".git" not in path.parts and ".venv" not in path.parts
+          ]
+
+          if not files:
+              print("No Python files found; skipping bytecode compilation.")
+              sys.exit(0)
+
+          for path in files:
+              py_compile.compile(str(path), doraise=True)
+          PY
