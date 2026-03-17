@@ -9,7 +9,7 @@ USER_AGENT = "useful-lib-healthcheck"
 
 
 class _NoRedirect(HTTPRedirectHandler):
-    """Prevent urllib from following redirects to non-allowlisted hosts."""
+    """Prevent urllib from following any redirects to reduce SSRF risk."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         """Block redirects by refusing to create a follow-up request."""
@@ -29,7 +29,7 @@ def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> boo
         opener = build_opener(_NoRedirect())
         opener.addheaders = [("User-Agent", USER_AGENT)]
         # Host and scheme are validated and redirects are disabled prior to opening the URL.
-        with opener.open(url, timeout=timeout) as response:  # nosec: B310
+        with opener.open(url, timeout=timeout) as response:  # nosec: B310 - host is allowlisted and redirects are blocked
             return 200 <= response.status < 300
     except (HTTPError, URLError, socket.timeout, ValueError):
         return False
