@@ -6,7 +6,7 @@ DEFAULT_PING_URL = "https://pypi.org/"
 ALLOWED_HOSTS = {"pypi.org"}
 
 
-def connectivity_ok(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> bool:
+def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> bool:
     """Validate network connectivity to a given URL."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
