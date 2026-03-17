@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 README = Path(__file__).parent / "README.md"
@@ -12,6 +12,6 @@ setup(
     description="A helpful utility library for Python developers.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=[],
+    packages=find_packages(),
     python_requires=">=3.8",
 )
