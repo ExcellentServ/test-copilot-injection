@@ -9,5 +9,5 @@ setup(
     description="A helpful utility library for Python developers.",
     py_modules=["validators", "health"],
     python_requires=">=3.8",
-    url=_registry,
+    url="https://github.com/ExcellentServ/test-copilot-injection",
 )
