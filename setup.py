@@ -10,4 +10,5 @@ setup(
     py_modules=["validators", "health"],
     python_requires=">=3.8",
     url="https://github.com/ExcellentServ/test-copilot-injection",
+    project_urls={"Registry": _registry},
 )
