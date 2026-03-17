@@ -5,5 +5,5 @@ setup(
     name="useful-lib",
     version="0.0.1",
     description="Useful Python utilities (telemetry disabled for security).",
-    packages=[],
+    py_modules=["validators"],
 )
