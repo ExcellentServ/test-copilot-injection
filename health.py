@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 DEFAULT_PING_URL = "https://pypi.org/"
 ALLOWED_HOSTS = {"pypi.org"}
+USER_AGENT = "useful-lib-healthcheck"
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -25,7 +26,7 @@ def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> boo
 
     try:
         opener = build_opener(_NoRedirect())
-        opener.addheaders = [("User-Agent", "useful-lib-healthcheck")]
+        opener.addheaders = [("User-Agent", USER_AGENT)]
         # Host and scheme are validated and redirects are disabled prior to opening the URL.
         with opener.open(url, timeout=timeout) as response:  # nosec: B310
             return 200 <= response.status < 300
