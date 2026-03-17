@@ -11,7 +11,8 @@ def connectivity_ok(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> bool:
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return False
-    if parsed.hostname not in ALLOWED_HOSTS:
+    hostname = parsed.hostname
+    if not hostname or hostname not in ALLOWED_HOSTS:
         return False
 
     try:
