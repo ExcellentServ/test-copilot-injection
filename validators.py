@@ -1,7 +1,10 @@
 def run_health_check() -> bool:
     """
-    Placeholder health check to keep the build configuration self-contained
-    and free of external network calls.
+    Placeholder health check.
+
+    Returns True to indicate the local environment is ready without performing
+    any external network operations. Replace with real validation logic if the
+    project adds runtime requirements in the future.
     """
 
     return True
