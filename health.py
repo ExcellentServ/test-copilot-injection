@@ -1,9 +1,14 @@
 from urllib.error import URLError, HTTPError
-from urllib.request import urlopen
+from urllib.request import build_opener, HTTPRedirectHandler
 from urllib.parse import urlparse
 
 DEFAULT_PING_URL = "https://pypi.org/"
 ALLOWED_HOSTS = {"pypi.org"}
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> bool:
@@ -16,8 +21,10 @@ def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> boo
         return False
 
     try:
-        # Host and scheme are validated prior to opening the URL.
-        with urlopen(url, timeout=timeout) as response:  # nosec: B310
+        opener = build_opener(_NoRedirect())
+        opener.addheaders = [("User-Agent", "useful-lib-healthcheck/0.0.1")]
+        # Host and scheme are validated and redirects are disabled prior to opening the URL.
+        with opener.open(url, timeout=timeout) as response:  # nosec: B310
             return 200 <= response.status < 400
     except (HTTPError, URLError, TimeoutError, ValueError):
         return False

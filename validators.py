@@ -5,7 +5,7 @@ DEFAULT_REGISTRY = "https://pypi.org/simple/"
 
 
 def get_registry_config() -> Dict[str, str]:
-    """Load configuration pointing at the standard package index."""
+    """Return the default configuration pointing at the standard package index."""
     return {"registry": DEFAULT_REGISTRY}
 
 
