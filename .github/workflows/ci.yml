@@ -1,0 +1,27 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f setup.py ] || [ -f pyproject.toml ]; then
+            pip install -e .
+          else
+            echo "No Python package configuration found; skipping editable install."
+          fi
+
+      - name: Run checks
+        run: |
+          python -m compileall -q .
