@@ -10,67 +10,99 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from typing import List, Optional, Tuple
+from dataclasses import dataclass
+from urllib.parse import urlparse
 
 
-Command = Tuple[str, List[str], int]
+@dataclass(frozen=True)
+class VerificationCommand:
+    label: str
+    command: list[str]
+    max_output_length: int
 
 
-def _discover_owner_repo() -> Tuple[Optional[str], Optional[str]]:
+def _discover_owner_repo() -> tuple[str | None, str | None]:
     """Return (owner, repo) derived from the configured remote, if available."""
-    result = subprocess.run(
-        ["git", "config", "--get", "remote.origin.url"],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None, None
+
+    if result.returncode != 0:
+        return None, None
     url = result.stdout.strip()
     if not url:
         return None, None
 
-    # Handle URLs like:
-    # - https://github.com/ExcellentServ/test-copilot-injection.git
-    # - git@github.com:ExcellentServ/test-copilot-injection.git
-    trimmed = url.removesuffix(".git")
-    if "github.com/" in trimmed:
-        _, _, tail = trimmed.partition("github.com/")
-    elif "github.com:" in trimmed:
-        _, _, tail = trimmed.partition("github.com:")
+    return _parse_owner_repo(url)
+
+
+def _parse_owner_repo(remote_url: str) -> tuple[str | None, str | None]:
+    """Extract owner/repo from common GitHub remote URL formats."""
+    cleaned = remote_url.removesuffix(".git").strip()
+    if cleaned.startswith("git@"):
+        if cleaned.startswith("git@github.com:"):
+            path = cleaned.removeprefix("git@github.com:").lstrip("/")
+        else:
+            return None, None
     else:
+        parsed = urlparse(cleaned)
+        if parsed.hostname != "github.com":
+            return None, None
+        path = parsed.path.lstrip("/")
+
+    if "/" not in path:
         return None, None
 
-    if "/" not in tail:
-        return None, None
-
-    owner, repo = tail.split("/", 1)
+    owner, repo = path.split("/", 1)
     return owner or None, repo or None
 
 
-def _commands(owner: str, repo: str) -> List[Command]:
+def _commands(owner: str, repo: str, branch: str) -> list[VerificationCommand]:
     base = f"repos/{owner}/{repo}"
     return [
-        ("Branch protection", ["gh", "api", f"{base}/branches/main/protection"], 200),
-        ("Collaborators", ["gh", "api", f"{base}/collaborators"], 500),
-        ("Deploy keys", ["gh", "api", f"{base}/keys"], 500),
-        ("Webhooks", ["gh", "api", f"{base}/hooks"], 500),
+        VerificationCommand(
+            "Branch protection", ["gh", "api", f"{base}/branches/{branch}/protection"], 200
+        ),
+        VerificationCommand(
+            "Collaborators", ["gh", "api", f"{base}/collaborators"], 200
+        ),
+        VerificationCommand("Deploy keys", ["gh", "api", f"{base}/keys"], 200),
+        VerificationCommand("Webhooks", ["gh", "api", f"{base}/hooks"], 200),
     ]
 
 
-def run_command(label: str, command: List[str], preview_chars: int, execute: bool) -> int:
+def execute_verification_command(command: VerificationCommand, execute: bool) -> int:
     if not execute:
-        print(f"[dry-run] {' '.join(command)}")
+        print(f"[dry-run] {' '.join(command.command)}")
         return 0
 
-    result = subprocess.run(command, capture_output=True, text=True)
+    try:
+        result = subprocess.run(command.command, capture_output=True, text=True, timeout=15)
+    except FileNotFoundError:
+        print("gh CLI not found; install GitHub CLI to execute verification.", file=sys.stderr)
+        return 1
+    except subprocess.TimeoutExpired:
+        print(f"{command.label} timed out while calling gh API.", file=sys.stderr)
+        return 1
     if result.stdout:
-        print(f"{label}: {result.stdout[:preview_chars]}")
+        output = result.stdout
+        truncated = len(output) > command.max_output_length
+        suffix = "..." if truncated else ""
+        print(f"{command.label}: {output[:command.max_output_length]}{suffix}")
     if result.stderr:
-        print(f"{label} stderr: {result.stderr.strip()}", file=sys.stderr)
+        print(f"{command.label} stderr: {result.stderr.strip()}", file=sys.stderr)
     if result.returncode != 0:
-        print(f"{label} command failed with exit code {result.returncode}", file=sys.stderr)
+        print(f"{command.label} command failed with exit code {result.returncode}", file=sys.stderr)
     return result.returncode
 
 
-def verify(owner: Optional[str], repo: Optional[str], execute: bool) -> int:
+def verify(owner: str | None, repo: str | None, branch: str, execute: bool) -> int:
     if not owner or not repo:
         print(
             "Owner and repo are required. Provide them via --owner/--repo "
@@ -79,13 +111,20 @@ def verify(owner: Optional[str], repo: Optional[str], execute: bool) -> int:
         )
         return 1
 
-    status = 0
-    for label, cmd, preview in _commands(owner, repo):
-        status |= run_command(label, cmd, preview, execute)
-    return status
+    exit_code = 0
+    failures: list[str] = []
+    for command in _commands(owner, repo, branch):
+        result = execute_verification_command(command, execute)
+        if result != 0:
+            exit_code = 1
+            failures.append(command.label)
+
+    if failures:
+        print(f"Verification failed for: {', '.join(failures)}", file=sys.stderr)
+    return exit_code
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     default_owner, default_repo = _discover_owner_repo()
     parser = argparse.ArgumentParser(description="Verify repository settings against security baseline.")
     parser.add_argument("--owner", default=default_owner, help="GitHub owner/org (default from remote.origin.url)")
@@ -95,8 +134,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="Actually call GitHub API using the gh CLI. Default is dry-run for safety.",
     )
+    parser.add_argument(
+        "--branch",
+        default="main",
+        help="Branch name to check protection settings for (default: main).",
+    )
     args = parser.parse_args(argv)
-    return verify(args.owner, args.repo, args.execute)
+    return verify(args.owner, args.repo, args.branch, args.execute)
 
 
 if __name__ == "__main__":
