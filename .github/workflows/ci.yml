@@ -34,7 +34,7 @@ jobs:
           import sys
 
           found = False
-          excluded = {".git", ".venv", "venv"}
+          excluded = {".git", ".venv", "venv", "__pycache__"}
           for path in pathlib.Path(".").rglob("*.py"):
               if any(part in excluded for part in path.parts):
                   continue
@@ -42,7 +42,7 @@ jobs:
               found = True
               try:
                   py_compile.compile(str(path), doraise=True)
-              except Exception as exc:  # pragma: no cover - runtime guard
+              except py_compile.PyCompileError as exc:  # pragma: no cover - runtime guard
                   print(f"Failed to compile {path}: {exc}")
                   raise
 
