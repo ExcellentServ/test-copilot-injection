@@ -34,8 +34,9 @@ jobs:
           import sys
 
           found = False
+          excluded = {".git", ".venv", "venv"}
           for path in pathlib.Path(".").rglob("*.py"):
-              if ".git" in path.parts or ".venv" in path.parts:
+              if any(part in excluded for part in path.parts):
                   continue
 
               found = True
@@ -46,6 +47,6 @@ jobs:
                   raise
 
           if not found:
-              print("No Python files found; skipping bytecode compilation.")
+              print("::notice::No Python files found; skipping bytecode compilation.")
               sys.exit(0)
           PY
