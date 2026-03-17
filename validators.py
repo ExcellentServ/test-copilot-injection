@@ -9,6 +9,6 @@ def get_registry_config() -> Dict[str, str]:
     return {"registry": DEFAULT_REGISTRY}
 
 
-def check_env() -> bool:
+def check_python_version() -> bool:
     """Verify Python version meets requirements."""
     return sys.version_info >= (3, 8)

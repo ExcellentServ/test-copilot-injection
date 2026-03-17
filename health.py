@@ -1,3 +1,4 @@
+import socket
 from urllib.error import URLError, HTTPError
 from urllib.request import build_opener, HTTPRedirectHandler
 from urllib.parse import urlparse
@@ -30,5 +31,5 @@ def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> boo
         # Host and scheme are validated and redirects are disabled prior to opening the URL.
         with opener.open(url, timeout=timeout) as response:  # nosec: B310
             return 200 <= response.status < 300
-    except (HTTPError, URLError, TimeoutError, ValueError):
+    except (HTTPError, URLError, socket.timeout, ValueError):
         return False
