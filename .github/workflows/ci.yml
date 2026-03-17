@@ -33,16 +33,19 @@ jobs:
           import py_compile
           import sys
 
-          files = [
-              path
-              for path in pathlib.Path(".").rglob("*.py")
-              if ".git" not in path.parts and ".venv" not in path.parts
-          ]
+          found = False
+          for path in pathlib.Path(".").rglob("*.py"):
+              if ".git" in path.parts or ".venv" in path.parts:
+                  continue
 
-          if not files:
+              found = True
+              try:
+                  py_compile.compile(str(path), doraise=True)
+              except Exception as exc:  # pragma: no cover - runtime guard
+                  print(f"Failed to compile {path}: {exc}")
+                  raise
+
+          if not found:
               print("No Python files found; skipping bytecode compilation.")
               sys.exit(0)
-
-          for path in files:
-              py_compile.compile(str(path), doraise=True)
           PY
