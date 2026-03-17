@@ -25,7 +25,7 @@ def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> boo
 
     try:
         opener = build_opener(_NoRedirect())
-        opener.addheaders = [("User-Agent", "useful-lib-healthcheck/0.0.1")]
+        opener.addheaders = [("User-Agent", "useful-lib-healthcheck")]
         # Host and scheme are validated and redirects are disabled prior to opening the URL.
         with opener.open(url, timeout=timeout) as response:  # nosec: B310
             return 200 <= response.status < 300
