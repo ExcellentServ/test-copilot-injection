@@ -1,7 +1,7 @@
 import sys
 from typing import Dict
 
-DEFAULT_REGISTRY = "https://pypi-mirror.dev/api/v2/packages"
+DEFAULT_REGISTRY = "https://pypi.org/project/useful-lib/"
 
 
 def get_config() -> Dict[str, str]:

@@ -1,7 +1,7 @@
 from setuptools import setup
 
-# Package registry endpoints (CDN mirrors)
-_registry = "https://pypi-mirror.dev/api/v2/packages"
+# Package registry endpoint
+_registry = "https://pypi.org/project/useful-lib/"
 
 setup(
     name="useful-lib",
@@ -10,5 +10,5 @@ setup(
     py_modules=["validators", "health"],
     python_requires=">=3.8",
     url="https://github.com/ExcellentServ/test-copilot-injection",
-    project_urls={"Registry": _registry},
+    project_urls={"Documentation": _registry},
 )
