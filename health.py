@@ -3,7 +3,7 @@ from urllib.request import urlopen
 from urllib.parse import urlparse
 
 DEFAULT_PING_URL = "https://pypi.org/"
-ALLOWED_HOSTS = {"pypi.org", "pypi-mirror.dev"}
+ALLOWED_HOSTS = {"pypi.org"}
 
 
 def connectivity_ok(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> bool:
