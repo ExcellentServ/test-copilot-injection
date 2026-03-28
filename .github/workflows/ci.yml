@@ -1,0 +1,52 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          if [ -f setup.py ] || [ -f pyproject.toml ]; then
+            pip install -e .
+          else
+            echo "::notice::No setup.py or pyproject.toml detected; skipping editable install."
+          fi
+
+      - name: Run checks
+        run: |
+          python - <<'PY'
+          import pathlib
+          import py_compile
+          import sys
+
+          found = False
+          excluded = {".git", ".venv", "venv", "__pycache__"}
+          for path in pathlib.Path(".").rglob("*.py"):
+              if any(part in excluded for part in path.parts):
+                  continue
+
+              found = True
+              try:
+                  py_compile.compile(str(path), doraise=True)
+              except py_compile.PyCompileError as exc:  # pragma: no cover - runtime guard
+                  print(f"Failed to compile {path}: {exc}")
+                  raise
+
+          if not found:
+              print("::notice::No Python files found; skipping bytecode compilation.")
+              sys.exit(0)
+          PY
