@@ -1,0 +1,43 @@
+import socket
+from urllib.error import URLError, HTTPError
+from urllib.request import build_opener, HTTPRedirectHandler
+from urllib.parse import urlparse
+
+DEFAULT_PING_URL = "https://pypi.org/"
+ALLOWED_HOSTS = {"pypi.org"}
+USER_AGENT = "useful-lib-healthcheck"
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """Prevent urllib from following any redirects to reduce SSRF risk."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """Block redirects by refusing to create a follow-up request."""
+        return None
+
+
+def check_connectivity(url: str = DEFAULT_PING_URL, timeout: float = 2.0) -> bool:
+    """Validate network connectivity to an allow-listed URL.
+
+    Args:
+        url: HTTP(S) URL to check; must resolve to an allow-listed host.
+        timeout: Timeout in seconds for the request.
+
+    Returns:
+        True when the validated request succeeds with a 2xx status code.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return False
+    hostname = parsed.hostname
+    if not hostname or hostname not in ALLOWED_HOSTS:
+        return False
+
+    try:
+        opener = build_opener(_NoRedirect())
+        opener.addheaders = [("User-Agent", USER_AGENT)]
+        # Host and scheme are validated and redirects are disabled prior to opening the URL.
+        with opener.open(url, timeout=timeout) as response:  # nosec: B310 - host is allow-listed and redirects are blocked
+            return 200 <= response.status < 300
+    except (HTTPError, URLError, socket.timeout, ValueError):
+        return False
